@@ -30,6 +30,7 @@ void init_lines(lines_t* lines)
 	lines->number = 0;
 	lines->size = 8;
 	lines->lines = (line_t*)malloc(sizeof(line_t)*lines->size);
+	assert(lines->lines);
 	memset(lines->lines, 0, sizeof(line_t)*lines->size);
 }
 void free_lines(lines_t* lines)
@@ -92,7 +93,13 @@ int main(int argc, char** argv)
 		fprintf(stderr, "too few arguments\n");
 		exit(-1);
 	}
-	FILE* file = fopen(argv[1], "a+");
+	FILE* file = fopen(argv[1], "r+");
+	if (file == NULL)
+	{
+		fprintf(stderr, "can not open %s", argv[1]);
+		perror(" ");
+		exit(-1);
+	}
 
 	lines_t lines;
 	init_lines(&lines);
@@ -105,7 +112,8 @@ int main(int argc, char** argv)
 		{
 			lines.size = 2*lines.size;
 			lines.lines = (line_t*)realloc(lines.lines, sizeof(line_t)*lines.size);
-			memset(lines.lines + lines.number, 0, sizeof(line_t)*lines.size);
+			assert(lines.lines);
+			memset(lines.lines + lines.number, 0, sizeof(line_t)*(lines.size - lines.number));
 		}
 	}
 	fclose(file);
@@ -131,6 +139,11 @@ int main(int argc, char** argv)
 					range.end = lines.number;
 					next++;
 				}
+				else if (*next == '+')
+				{
+					range.end = range.start + strtol(next,&tailptr,0);
+					next = tailptr;
+				}
 				else{
 					 range.end = strtol(next,
 						&tailptr,
@@ -151,6 +164,7 @@ int main(int argc, char** argv)
 			else
 			for (int i = range.start-1; i < range.end; i++)
 				printf("%s", lines.lines[i].buffer);
+			current_line_address = range.end;
 		}
 		else if (*next == 'a')
 		{
