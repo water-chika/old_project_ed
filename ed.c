@@ -59,6 +59,16 @@ int get_lines(lines_t* lines, FILE* file)
 	}
 }
 
+int lines_delete(lines_t* lines, range_t range)
+{
+	for (int i = range.start-1; i<range.end; i++)
+	{
+		free(lines->lines[i].buffer);
+	}
+	memmove(lines->lines+range.start-1, lines->lines+range.end, sizeof(line_t)*(lines->number - range.end));
+	lines->number -= range.end - range.start +1;
+}
+
 int lines_append(lines_t* lines, int address, lines_t* append_lines)
 {
 	if (lines->size < lines->number + append_lines->number)
@@ -71,6 +81,7 @@ int lines_append(lines_t* lines, int address, lines_t* append_lines)
 	memcpy(lines->lines+address, append_lines->lines, sizeof(line_t)*append_lines->number);
 	memset(append_lines->lines, 0, append_lines->number*sizeof(line_t));
 	lines->number += append_lines->number;
+	current_line_address = address+append_lines->number;
 	append_lines->number = 0;
 }
 
@@ -115,10 +126,17 @@ int main(int argc, char** argv)
 			if (*next== ',')
 			{
 				next++;
-				range.end = strtol(next,
+				if (*next == '$')
+				{
+					range.end = lines.number;
+					next++;
+				}
+				else{
+					 range.end = strtol(next,
 						&tailptr,
 						0);
-				next = tailptr;
+					next = tailptr;
+				}
 			}
 			else
 			{
@@ -127,8 +145,10 @@ int main(int argc, char** argv)
 		}
 		if (*next == 'p')
 		{
-			assert(0 < range.start && range.start <= lines.number);
-			assert(0 < range.end && range.end <= lines.number);
+			assert(0 <= range.start && range.start <= lines.number);
+			assert(0 <= range.end && range.end <= lines.number);
+			if (range.start == 0);
+			else
 			for (int i = range.start-1; i < range.end; i++)
 				printf("%s", lines.lines[i].buffer);
 		}
@@ -141,6 +161,11 @@ int main(int argc, char** argv)
 			printf("lines %d\n", append_lines.number);
 			lines_append(&lines, range.start, &append_lines);
 			free_lines(&append_lines);
+		}
+		else if (*next == 'd')
+		{
+			assert(0 <= range.start && range.start <= lines.number);
+			lines_delete(&lines, range);
 		}
 		if (user_line.buffer[0] == 'w')
 		{
